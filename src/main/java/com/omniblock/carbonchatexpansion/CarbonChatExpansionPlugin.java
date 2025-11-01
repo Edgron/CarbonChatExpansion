@@ -12,7 +12,6 @@ import java.util.List;
 public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
 
     private CarbonChannelExpansion expansion;
-    private static final String BUBBLE_DISABLE_PREFIX = "`";
 
     @Override
     public void onEnable() {
@@ -35,7 +34,14 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
     }
 
     /**
-     * LOWEST Priority - Añade backtick si no debe haber burbuja
+     * Obtiene el prefijo configurado para deshabilitar burbujas
+     */
+    private String getBubbleDisablePrefix() {
+        return getConfig().getString("bubble-disable-prefix", "!");
+    }
+
+    /**
+     * LOWEST Priority - Añade prefijo si no debe haber burbuja
      */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerChatLowest(AsyncPlayerChatEvent event) {
@@ -50,7 +56,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
 
             List<String> allowedChannels = getConfig().getStringList("channels-with-bubbles");
             if (!allowedChannels.contains(channelName)) {
-                event.setMessage(BUBBLE_DISABLE_PREFIX + event.getMessage());
+                event.setMessage(getBubbleDisablePrefix() + event.getMessage());
             }
         } catch (Exception e) {
             getLogger().warning("Error en LOWEST: " + e.getMessage());
@@ -58,13 +64,14 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
     }
 
     /**
-     * HIGH Priority - Remueve el backtick antes de mostrar
+     * HIGH Priority - Remueve el prefijo antes de mostrar
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerChatHigh(AsyncPlayerChatEvent event) {
+        String prefix = getBubbleDisablePrefix();
         String mensaje = event.getMessage();
-        if (mensaje.startsWith(BUBBLE_DISABLE_PREFIX)) {
-            event.setMessage(mensaje.substring(1));
+        if (mensaje.startsWith(prefix)) {
+            event.setMessage(mensaje.substring(prefix.length()));
         }
     }
 
