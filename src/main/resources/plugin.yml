@@ -1,29 +1,11 @@
 name: CarbonChatExpansion
-version: 1.0.0
+version: 6.0.0
 main: com.omniblock.carbonchatexpansion.CarbonChatExpansionPlugin
-author: Edgron
-description: Control de ChatBubbles por canal para CarbonChat
+author: Omniblock
+description: PlaceholderAPI Expansion para CarbonChat - ChatBubbles Control
 api-version: 1.20
 
 softdepend:
   - PlaceholderAPI
   - CarbonChat
   - ChatBubbles
-
-commands:
-  cbereload:
-    description: Recarga la configuración del plugin
-    usage: /cbereload
-    permission: carbonchatexpansion.reload
-  cbedebug:
-    description: Activa o desactiva el modo debug
-    usage: /cbedebug
-    permission: carbonchatexpansion.debug
-
-permissions:
-  carbonchatexpansion.reload:
-    description: Permite recargar la configuración
-    default: op
-  carbonchatexpansion.debug:
-    description: Permite usar el modo debug
-    default: op
