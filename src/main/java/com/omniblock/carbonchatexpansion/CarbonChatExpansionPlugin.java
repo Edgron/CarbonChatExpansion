@@ -12,6 +12,7 @@ import java.util.List;
 public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
 
     private CarbonChannelExpansion expansion;
+    private static final String BUBBLE_PREFIX = ".";
 
     @Override
     public void onEnable() {
@@ -20,9 +21,9 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             expansion = new CarbonChannelExpansion(this);
             if (expansion.register()) {
-                getLogger().info("CarbonChat Expansion iniciado");
+                getLogger().info("CarbonChat Expansion iniciado correctamente");
             } else {
-                getLogger().warning("Error en PlaceholderAPI");
+                getLogger().warning("Error al registrar en PlaceholderAPI");
             }
         } else {
             getLogger().warning("PlaceholderAPI no encontrado");
@@ -33,12 +34,12 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
     }
 
-    private String getBubbleDisablePrefix() {
-        return getConfig().getString("bubble-disable-prefix", "!");
-    }
-
+    /**
+     * LOWEST Priority - Añade "." si el canal debe tener burbuja
+     * ChatBubbles (Modo 5) removerá automáticamente el "."
+     */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onPlayerChatLowest(AsyncPlayerChatEvent event) {
+    public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
         if (player == null) return;
 
@@ -48,32 +49,12 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
                 return;
             }
 
-            List<String> allowedChannels = getConfig().getStringList("channels-with-bubbles");
-            if (!allowedChannels.contains(channelName)) {
-                String prefix = getBubbleDisablePrefix();
-                
-                // Sincronización con ~5-10ms de delay
-                Thread.yield();
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-                
-                event.setMessage(prefix + event.getMessage());
+            List<String> bubbleChannels = getConfig().getStringList("bubble-channels");
+            if (bubbleChannels.contains(channelName)) {
+                event.setMessage(BUBBLE_PREFIX + event.getMessage());
             }
         } catch (Exception e) {
             getLogger().warning("Error: " + e.getMessage());
-        }
-    }
-
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onPlayerChatHigh(AsyncPlayerChatEvent event) {
-        String mensaje = event.getMessage();
-        String prefix = getBubbleDisablePrefix();
-
-        if (mensaje.startsWith(prefix)) {
-            event.setMessage(mensaje.substring(prefix.length()));
         }
     }
 

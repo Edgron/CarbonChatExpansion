@@ -26,7 +26,7 @@ public class CarbonChannelExpansion extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getVersion() {
-        return "6.0.0";
+        return "7.0.0";
     }
 
     @Override

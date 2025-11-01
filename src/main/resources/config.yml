@@ -1,10 +1,13 @@
 # ============================================================
-# CarbonChat Expansion - Configuración
+# CarbonChat Expansion v7.0 - Configuración
 # ============================================================
 
-# Prefijo usado para evitar burbujas
-# Debe coincidir con ConfigSix_Prefix_Characters de ChatBubbles
-bubble-disable-prefix: "!"
+# Canales que GENERAN burbujas
+# El plugin añadirá "." automáticamente al inicio del mensaje
+# ChatBubbles (Modo 5) lo detectará y creará la burbuja
+bubble-channels:
+  - chillar
+  - gritar
 
 # COLORES POR CANAL
 channel-colors:
@@ -14,7 +17,10 @@ channel-colors:
   gritar: "<red>"
   local: "<green>"
 
-# CANALES CON BURBUJAS
-channels-with-bubbles:
-  - chillar
-  - local
+# REQUISITO: ChatBubbles en Modo 5
+# ============================================================
+# ChatBubbles/config.yml:
+#   ChatBubble_Configuration_Mode: 5
+#   ConfigFive_Prefix_Characters:
+#     - "."
+#   ChatBubble_Send_Original_Message: true
