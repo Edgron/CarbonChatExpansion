@@ -12,7 +12,7 @@ import java.util.List;
 public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
 
     private CarbonChannelExpansion expansion;
-    private static final String BUBBLE_DISABLE_PREFIX = "`";
+    private static final String BUBBLE_DISABLE_PREFIX = "æ";
 
     @Override
     public void onEnable() {
@@ -20,13 +20,8 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             expansion = new CarbonChannelExpansion(this);
-            if (expansion.register()) {
-                getLogger().info("CarbonChat Expansion v6.0 habilitado");
-            } else {
-                getLogger().warning("Error al registrar la expansión de PlaceholderAPI");
-            }
+            expansion.register();
         } else {
-            getLogger().warning("PlaceholderAPI no encontrado");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -35,7 +30,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
     }
 
     /**
-     * LOWEST Priority - Añade ` al inicio del mensaje si NO debe haber burbuja
+     * LOWEST Priority - Añade "æ" si no debe haber burbuja
      */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerChatLowest(AsyncPlayerChatEvent event) {
@@ -57,12 +52,12 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
             }
 
         } catch (Exception e) {
-            getLogger().warning("Error en listener LOWEST: " + e.getMessage());
+            // Error silencioso
         }
     }
 
     /**
-     * HIGH Priority - Remueve el ` que añadimos en LOWEST
+     * HIGH Priority - Remueve "æ" antes de mostrar
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerChatHigh(AsyncPlayerChatEvent event) {

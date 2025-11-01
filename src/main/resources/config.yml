@@ -1,4 +1,5 @@
-# CarbonChat Expansion v6.0 - Configuración
+# CarbonChat Expansion v6.0
+# Configuración de canales con burbujas
 
 channel-colors:
   default: "<white>"

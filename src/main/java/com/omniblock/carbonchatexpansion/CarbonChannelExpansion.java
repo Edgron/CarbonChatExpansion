@@ -61,7 +61,7 @@ public class CarbonChannelExpansion extends PlaceholderExpansion {
             }
 
         } catch (Exception e) {
-            plugin.getLogger().fine("Error: " + e.getMessage());
+            // Silent
         }
 
         return "";
@@ -107,7 +107,6 @@ public class CarbonChannelExpansion extends PlaceholderExpansion {
             return channelKey;
 
         } catch (Exception e) {
-            plugin.getLogger().fine("Error obteniendo canal: " + e.getMessage());
             return null;
         }
     }
