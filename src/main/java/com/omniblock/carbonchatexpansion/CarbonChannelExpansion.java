@@ -21,12 +21,12 @@ public class CarbonChannelExpansion extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getAuthor() {
-        return "Omniblock";
+        return "Edgron";
     }
 
     @Override
     public @NotNull String getVersion() {
-        return "7.0.0";
+        return "1.0.0";
     }
 
     @Override
@@ -120,6 +120,6 @@ public class CarbonChannelExpansion extends PlaceholderExpansion {
             return color;
         }
 
-        return plugin.getConfig().getString("channel-colors.default", "<white>");
+        return plugin.getConfig().getString("channel-colors.default", "#ffffff");
     }
 }

@@ -1,26 +1,35 @@
 # ============================================================
-# CarbonChat Expansion v7.0 - Configuración
+# CarbonChatExpansion v1.0 - Configuration
+# Created for Omniblock by Edgron
 # ============================================================
 
-# Canales que GENERAN burbujas
-# El plugin añadirá "." automáticamente al inicio del mensaje
-# ChatBubbles (Modo 5) lo detectará y creará la burbuja
+# Bubble prefix character (must match ChatBubbles config)
+# Este símbolo debe coincidir con ConfigFive_Prefix_Characters en ChatBubbles
+bubble-prefix: "."
+
+# Channels that generate chat bubbles
+# Deben tener el mismo nombre que en CarbonChat
 bubble-channels:
   - chillar
   - gritar
 
-# COLORES POR CANAL
+# Channel colors (HEX format: #RRGGBB)
+# Usado para el placeholder %carbonchat_channel_color%
 channel-colors:
-  default: "<white>"
-  global: "<yellow>"
+  default: "#ffffff"
+  global: "#ffff55"
   chillar: "#ff7d86"
-  gritar: "<red>"
-  local: "<green>"
+  gritar: "#ff0000"
+  local: "#55ff55"
 
-# REQUISITO: ChatBubbles en Modo 5
+# Debug mode (logs extra information)
+debug-mode: false
+
 # ============================================================
-# ChatBubbles/config.yml:
+# IMPORTANT: ChatBubbles Configuration
+# ============================================================
+# ChatBubbles/config.yml must be set to Mode 5:
 #   ChatBubble_Configuration_Mode: 5
 #   ConfigFive_Prefix_Characters:
-#     - "."
+#     - "."  (must match bubble-prefix above)
 #   ChatBubble_Send_Original_Message: true
