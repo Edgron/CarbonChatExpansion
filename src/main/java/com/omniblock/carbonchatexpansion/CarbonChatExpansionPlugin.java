@@ -55,7 +55,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
                 // Sincronización con ~5-10ms de delay
                 Thread.yield();
                 try {
-                    Thread.sleep(5);
+                    Thread.sleep(30);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
