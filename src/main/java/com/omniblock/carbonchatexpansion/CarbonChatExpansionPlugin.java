@@ -20,9 +20,9 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             expansion = new CarbonChannelExpansion(this);
             if (expansion.register()) {
-                getLogger().info("CarbonChat Expansion iniciado correctamente");
+                getLogger().info("CarbonChat Expansion iniciado");
             } else {
-                getLogger().warning("Error al registrar en PlaceholderAPI");
+                getLogger().warning("Error en PlaceholderAPI");
             }
         } else {
             getLogger().warning("PlaceholderAPI no encontrado");
@@ -50,10 +50,20 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
 
             List<String> allowedChannels = getConfig().getStringList("channels-with-bubbles");
             if (!allowedChannels.contains(channelName)) {
-                event.setMessage(getBubbleDisablePrefix() + event.getMessage());
+                String prefix = getBubbleDisablePrefix();
+                
+                // Sincronización con ~5-10ms de delay
+                Thread.yield();
+                try {
+                    Thread.sleep(5);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                
+                event.setMessage(prefix + event.getMessage());
             }
         } catch (Exception e) {
-            getLogger().warning("Error en LOWEST: " + e.getMessage());
+            getLogger().warning("Error: " + e.getMessage());
         }
     }
 
@@ -61,7 +71,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
     public void onPlayerChatHigh(AsyncPlayerChatEvent event) {
         String mensaje = event.getMessage();
         String prefix = getBubbleDisablePrefix();
-        
+
         if (mensaje.startsWith(prefix)) {
             event.setMessage(mensaje.substring(prefix.length()));
         }
