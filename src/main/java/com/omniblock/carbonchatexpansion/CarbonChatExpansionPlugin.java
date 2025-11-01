@@ -33,16 +33,10 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
     }
 
-    /**
-     * Obtiene el prefijo configurado para deshabilitar burbujas
-     */
     private String getBubbleDisablePrefix() {
         return getConfig().getString("bubble-disable-prefix", "!");
     }
 
-    /**
-     * LOWEST Priority - Añade prefijo si no debe haber burbuja
-     */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerChatLowest(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
@@ -63,15 +57,28 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    /**
-     * HIGH Priority - Remueve el prefijo antes de mostrar
-     */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerChatHigh(AsyncPlayerChatEvent event) {
-        String prefix = getBubbleDisablePrefix();
-        String mensaje = event.getMessage();
-        if (mensaje.startsWith(prefix)) {
-            event.setMessage(mensaje.substring(prefix.length()));
+        Player player = event.getPlayer();
+        if (player == null) return;
+
+        try {
+            String channelName = expansion.getChannelName(player);
+            if (channelName == null || channelName.isEmpty()) {
+                return;
+            }
+
+            // Solo remover prefijo si el canal NO está en la lista permitida
+            List<String> allowedChannels = getConfig().getStringList("channels-with-bubbles");
+            if (!allowedChannels.contains(channelName)) {
+                String prefix = getBubbleDisablePrefix();
+                String mensaje = event.getMessage();
+                if (mensaje.startsWith(prefix)) {
+                    event.setMessage(mensaje.substring(prefix.length()));
+                }
+            }
+        } catch (Exception e) {
+            getLogger().warning("Error en HIGH: " + e.getMessage());
         }
     }
 
