@@ -17,17 +17,16 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
-        getLogger().info("CarbonChat Expansion v6.0 - Iniciado");
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             expansion = new CarbonChannelExpansion(this);
             if (expansion.register()) {
-                getLogger().info("Expansión PlaceholderAPI registrada");
+                getLogger().info("CarbonChat Expansion iniciado correctamente");
             } else {
                 getLogger().warning("Error al registrar en PlaceholderAPI");
             }
         } else {
-            getLogger().warning("PlaceholderAPI no encontrado - desactivando");
+            getLogger().warning("PlaceholderAPI no encontrado");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -41,7 +40,6 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerChatLowest(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-
         if (player == null) return;
 
         try {
@@ -51,12 +49,11 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
             }
 
             List<String> allowedChannels = getConfig().getStringList("channels-with-bubbles");
-
             if (!allowedChannels.contains(channelName)) {
                 event.setMessage(BUBBLE_DISABLE_PREFIX + event.getMessage());
             }
         } catch (Exception e) {
-            getLogger().warning("Error: " + e.getMessage());
+            getLogger().warning("Error en LOWEST: " + e.getMessage());
         }
     }
 
@@ -73,6 +70,5 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
-        getLogger().info("CarbonChat Expansion desactivado");
     }
 }

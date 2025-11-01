@@ -1,5 +1,5 @@
 # ============================================================
-# CarbonChat Expansion v6.0 - Configuración
+# CarbonChat Expansion v6.0 FINAL - Configuración
 # ============================================================
 
 # COLORES POR CANAL
@@ -10,10 +10,20 @@ channel-colors:
   gritar: "<red>"
   local: "<green>"
 
-# CANALES CON BURBUJAS
+# CONTROL DE BURBUJAS POR CANAL
+# Los canales en esta lista mostrarán burbujas
 channels-with-bubbles:
   - chillar
   - local
 
-# REQUISITO: ChatBubbles debe estar en Modo 6
-# ChatBubbles/config.yml → ChatBubble_Configuration_Mode: 6
+# IMPORTANTE - CONFIGURACIÓN DE CHATBUBBLES REQUERIDA:
+# ====================================================
+# En ChatBubbles/config.yml, establece:
+#
+#   ChatBubble_Configuration_Mode: 6
+#
+# Modo 6: "Every message becomes a ChatBubble except for messages starting with "!<message>""
+#
+# Con esto, nuestro plugin automáticamente añade "!" a los mensajes que no deben tener burbuja,
+# y ChatBubbles lo detecta y NO crea burbuja.
+# El usuario NUNCA ve el "!" porque lo removemos antes de mostrar.
