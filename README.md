@@ -1,10 +1,22 @@
 # CarbonChat Expansion v6.0
 
-PlaceholderAPI Expansion para CarbonChat que controla qué canales muestran burbujas en ChatBubbles.
+Plugin de integración entre CarbonChat y ChatBubbles usando ChatBubbles Modo 6.
+
+## Instalación
+
+1. Configura ChatBubbles en Modo 6:
+   ```yaml
+   # ChatBubbles/config.yml
+   ChatBubble_Configuration_Mode: 6
+   ```
+
+2. Instala el JAR en plugins/
+
+3. Configura canales con burbujas en `config.yml`
+
+4. Reinicia servidor
 
 ## Configuración
-
-En `CarbonChatExpansion/config.yml`:
 
 ```yaml
 channels-with-bubbles:
@@ -12,7 +24,7 @@ channels-with-bubbles:
   - local
 ```
 
-Solo los canales en esta lista mostrarán burbujas. Los demás no tendrán burbuja.
+Solo los canales listados mostrarán burbujas.
 
 ## Versión
 

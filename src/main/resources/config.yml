@@ -1,6 +1,8 @@
-# CarbonChat Expansion v6.0
-# Configuración de canales con burbujas
+# ============================================================
+# CarbonChat Expansion v6.0 - Configuración
+# ============================================================
 
+# COLORES POR CANAL
 channel-colors:
   default: "<white>"
   global: "<yellow>"
@@ -8,6 +10,10 @@ channel-colors:
   gritar: "<red>"
   local: "<green>"
 
+# CANALES CON BURBUJAS
 channels-with-bubbles:
   - chillar
   - local
+
+# REQUISITO: ChatBubbles debe estar en Modo 6
+# ChatBubbles/config.yml → ChatBubble_Configuration_Mode: 6
