@@ -59,26 +59,11 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerChatHigh(AsyncPlayerChatEvent event) {
-        Player player = event.getPlayer();
-        if (player == null) return;
-
-        try {
-            String channelName = expansion.getChannelName(player);
-            if (channelName == null || channelName.isEmpty()) {
-                return;
-            }
-
-            // Solo remover prefijo si el canal NO está en la lista permitida
-            List<String> allowedChannels = getConfig().getStringList("channels-with-bubbles");
-            if (!allowedChannels.contains(channelName)) {
-                String prefix = getBubbleDisablePrefix();
-                String mensaje = event.getMessage();
-                if (mensaje.startsWith(prefix)) {
-                    event.setMessage(mensaje.substring(prefix.length()));
-                }
-            }
-        } catch (Exception e) {
-            getLogger().warning("Error en HIGH: " + e.getMessage());
+        String mensaje = event.getMessage();
+        String prefix = getBubbleDisablePrefix();
+        
+        if (mensaje.startsWith(prefix)) {
+            event.setMessage(mensaje.substring(prefix.length()));
         }
     }
 
