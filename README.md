@@ -27,6 +27,13 @@ Configure which CarbonChat channels generate chat bubbles:
 ### 3. Automatic Prefix Management
 The plugin automatically adds the bubble-trigger prefix (default: `.`) to messages in configured channels. ChatBubbles then detects this prefix and creates the bubble, removing the prefix automatically.
 
+### 4. ChatBubbles Toggle Detection
+The plugin intelligently detects when a player has ChatBubbles disabled:
+
+- If a player has ChatBubbles toggled OFF, the prefix is **NOT added**
+- This prevents the bubble prefix from appearing in chat when bubbles are disabled
+- Works seamlessly with ChatBubbles' built-in toggle system
+
 ---
 
 ## 📋 Requirements
@@ -112,7 +119,7 @@ ChatBubble_Message_Format:
 |---------|-----------|-------------|
 | `/cce` | `carbonchatexpansion.admin` | Show plugin help |
 | `/cce reload` | `carbonchatexpansion.admin` | Reload configuration |
-| `/cce debug <on\|off>` | `carbonchatexpansion.admin` | Toggle debug mode |
+| `/cce debug <on|off>` | `carbonchatexpansion.admin` | Toggle debug mode |
 
 **Aliases:** `/carbonchatexpansion`
 
@@ -134,11 +141,12 @@ Use these in ChatBubbles or other PlaceholderAPI-compatible plugins:
 
 1. **Player sends message** in a channel (e.g., "chillar")
 2. **CarbonChatExpansion** checks if "chillar" is in `bubble-channels`
-3. If yes, adds prefix: `.mensaje`
-4. **ChatBubbles** detects the `.` prefix and creates a bubble
-5. **ChatBubbles** automatically removes the `.` from the displayed text
-6. **Placeholder** `%carbonchat_channel_color%` applies the pink color (`#ff7d86`)
-7. **Result**: Pink bubble appears above player's head with the message
+3. **ChatBubbles toggle check**: If player has bubbles disabled, skip prefix
+4. If enabled, adds prefix: `.mensaje`
+5. **ChatBubbles** detects the `.` prefix and creates a bubble
+6. **ChatBubbles** automatically removes the `.` from the displayed text
+7. **Placeholder** `%carbonchat_channel_color%` applies the pink color (`#ff7d86`)
+8. **Result**: Pink bubble appears above player's head with the message
 
 ---
 
@@ -163,6 +171,7 @@ channel-colors:
 **Result:**
 - Messages in `global` → Chat only, no bubble
 - Messages in `chillar` → Chat + pink bubble
+- If player disables bubbles: No prefix added, clean chat
 
 ---
 
@@ -172,7 +181,13 @@ channel-colors:
 1. Verify ChatBubbles is in Mode 5
 2. Check `bubble-prefix` matches in both configs
 3. Ensure channel names match CarbonChat exactly
-4. Enable debug mode: `/cce debug on`
+4. Check player has ChatBubbles enabled (`/bubble`)
+5. Enable debug mode: `/cce debug on`
+
+### Prefix appearing in chat
+1. Check if player has ChatBubbles disabled
+2. Enable debug mode to see detailed logs
+3. Verify plugin version is up-to-date
 
 ### Colors not working
 1. Verify PlaceholderAPI is installed
@@ -183,7 +198,8 @@ channel-colors:
 Enable with `/cce debug on` to see detailed logging:
 - Channel detection
 - Message modification
-- Prefix addition
+- ChatBubbles toggle status
+- Prefix addition/removal decisions
 
 ---
 
@@ -193,6 +209,7 @@ Enable with `/cce debug on` to see detailed logging:
 - PlaceholderAPI integration for channel colors
 - Selective bubble generation per channel
 - Automatic prefix management
+- ChatBubbles toggle detection
 - Debug mode and reload command
 
 ---

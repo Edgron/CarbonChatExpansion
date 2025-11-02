@@ -91,6 +91,31 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         return getConfig().getString("bubble-prefix", ".");
     }
 
+    /**
+     * Detecta si ChatBubbles está desactivado para el jugador
+     * Retorna true si está DESACTIVADO, false si está ACTIVADO o no se puede detectar
+     */
+    private boolean isChatBubblesDisabledForPlayer(Player player) {
+        try {
+            Class<?> chatBubblesAPIClass = Class.forName("me.neznamy.chatbubbles.api.ChatBubblesAPI");
+            java.lang.reflect.Method isEnabledMethod = chatBubblesAPIClass.getMethod("isEnabled", Player.class);
+            Object result = isEnabledMethod.invoke(null, player);
+
+            if (result instanceof Boolean) {
+                boolean isEnabled = (Boolean) result;
+                if (debugMode && !isEnabled) {
+                    getLogger().info("[DEBUG] ChatBubbles está desactivado para " + player.getName());
+                }
+                return !isEnabled;
+            }
+        } catch (Exception e) {
+            if (debugMode) {
+                getLogger().fine("[DEBUG] Could not detect ChatBubbles status for " + player.getName() + ": " + e.getMessage());
+            }
+        }
+        return false;
+    }
+
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
@@ -103,14 +128,20 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
             }
 
             List<String> bubbleChannels = getConfig().getStringList("bubble-channels");
-            if (bubbleChannels.contains(channelName)) {
+
+            // Solo añadir prefijo si:
+            // 1. El canal está en la lista de burbujas
+            // 2. ChatBubbles está ACTIVADO para el jugador
+            if (bubbleChannels.contains(channelName) && !isChatBubblesDisabledForPlayer(player)) {
                 String originalMessage = event.getMessage();
                 String newMessage = getBubblePrefix() + originalMessage;
                 event.setMessage(newMessage);
 
                 if (debugMode) {
-                    getLogger().info("[DEBUG] Canal: " + channelName + " | Mensaje: '" + originalMessage + "' -> '" + newMessage + "'");
+                    getLogger().info("[DEBUG] [" + channelName + "] '" + originalMessage + "' -> '" + newMessage + "'");
                 }
+            } else if (debugMode && bubbleChannels.contains(channelName)) {
+                getLogger().info("[DEBUG] [" + channelName + "] ChatBubbles disabled for " + player.getName() + " - No prefix added");
             }
         } catch (Exception e) {
             getLogger().warning("Error: " + e.getMessage());

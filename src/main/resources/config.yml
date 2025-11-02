@@ -7,13 +7,13 @@
 # Este símbolo debe coincidir con ConfigFive_Prefix_Characters en ChatBubbles
 bubble-prefix: "."
 
-# Channels that generate chat bubbles
+# Channels that generate bubbles
 # Deben tener el mismo nombre que en CarbonChat
 bubble-channels:
   - chillar
   - gritar
 
-# Channel colors (HEX format: #RRGGBB)
+# Channel colors in HEX format (#RRGGBB)
 # Usado para el placeholder %carbonchat_channel_color%
 channel-colors:
   default: "#ffffff"
