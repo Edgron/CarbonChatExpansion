@@ -25,7 +25,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             expansion = new CarbonChannelExpansion(this);
             if (expansion.register()) {
-                getLogger().info("CarbonChatExpansion v1.0 enabled");
+                getLogger().info("CarbonChatExpansion v1.0.2 enabled");
             } else {
                 getLogger().warning("Failed to register PlaceholderAPI expansion");
             }
@@ -47,7 +47,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         }
 
         if (args.length == 0) {
-            sender.sendMessage("§6CarbonChatExpansion v1.0 §7- Comandos:");
+            sender.sendMessage("§6CarbonChatExpansion v1.0.2 §7- Comandos:");
             sender.sendMessage("§7- §e/cce reload §7- Recarga la configuración");
             sender.sendMessage("§7- §e/cce debug <on|off> §7- Activa/desactiva debug");
             return true;
@@ -93,31 +93,59 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
 
     /**
      * Detecta si ChatBubbles está desactivado para el jugador
-     * Retorna true si está DESACTIVADO, false si está ACTIVADO o no se puede detectar
+     * Usa múltiples métodos de detección para máxima compatibilidad
      */
     private boolean isChatBubblesDisabledForPlayer(Player player) {
+        // Método 1: Intenta usar ChatBubbles API directamente
         try {
-            Class<?> chatBubblesAPIClass = Class.forName("me.neznamy.chatbubbles.api.ChatBubblesAPI");
-            java.lang.reflect.Method isEnabledMethod = chatBubblesAPIClass.getMethod("isEnabled", Player.class);
-            Object result = isEnabledMethod.invoke(null, player);
+            Class<?> apiClass = Class.forName("me.neznamy.chatbubbles.api.ChatBubblesAPI");
+            java.lang.reflect.Method method = apiClass.getMethod("isEnabled", Player.class);
+            Object result = method.invoke(null, player);
 
             if (result instanceof Boolean) {
                 boolean isEnabled = (Boolean) result;
-                if (debugMode && !isEnabled) {
-                    getLogger().info("[DEBUG] ChatBubbles está desactivado para " + player.getName());
+                if (debugMode) {
+                    getLogger().info("[DEBUG] ChatBubbles API status for " + player.getName() + ": " + (isEnabled ? "ON" : "OFF"));
                 }
                 return !isEnabled;
             }
+        } catch (ClassNotFoundException e) {
+            if (debugMode) {
+                getLogger().info("[DEBUG] ChatBubbles API class not found - trying alternative");
+            }
         } catch (Exception e) {
             if (debugMode) {
-                getLogger().fine("[DEBUG] Could not detect ChatBubbles status for " + player.getName() + ": " + e.getMessage());
+                getLogger().info("[DEBUG] Error with API method: " + e.getMessage());
             }
+        }
+
+        // Método 2: Revisar metadata del jugador
+        try {
+            if (player.hasMetadata("chatbubble_disabled")) {
+                boolean disabled = player.getMetadata("chatbubble_disabled").get(0).asBoolean();
+                if (debugMode) {
+                    getLogger().info("[DEBUG] ChatBubbles metadata for " + player.getName() + ": " + (disabled ? "OFF" : "ON"));
+                }
+                return disabled;
+            }
+        } catch (Exception e) {
+            if (debugMode) {
+                getLogger().info("[DEBUG] No metadata found: " + e.getMessage());
+            }
+        }
+
+        // Si no podemos detectar, asumir que está activado (no remover prefijo)
+        if (debugMode) {
+            getLogger().info("[DEBUG] Could not detect ChatBubbles status for " + player.getName() + " - assuming ON");
         }
         return false;
     }
 
+    /**
+     * LOWEST Priority - Añade prefijo SIEMPRE si el canal requiere burbujas
+     */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onPlayerChat(AsyncPlayerChatEvent event) {
+    public void onPlayerChatLowest(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
         if (player == null) return;
 
@@ -129,27 +157,68 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
 
             List<String> bubbleChannels = getConfig().getStringList("bubble-channels");
 
-            // Solo añadir prefijo si:
-            // 1. El canal está en la lista de burbujas
-            // 2. ChatBubbles está ACTIVADO para el jugador
-            if (bubbleChannels.contains(channelName) && !isChatBubblesDisabledForPlayer(player)) {
+            if (bubbleChannels.contains(channelName)) {
                 String originalMessage = event.getMessage();
-                String newMessage = getBubblePrefix() + originalMessage;
+                String prefix = getBubblePrefix();
+                String newMessage = prefix + originalMessage;
                 event.setMessage(newMessage);
 
                 if (debugMode) {
-                    getLogger().info("[DEBUG] [" + channelName + "] '" + originalMessage + "' -> '" + newMessage + "'");
+                    getLogger().info("[DEBUG] LOWEST: Canal '" + channelName + "' requiere burbujas");
+                    getLogger().info("[DEBUG] LOWEST: '" + originalMessage + "' -> '" + newMessage + "'");
                 }
-            } else if (debugMode && bubbleChannels.contains(channelName)) {
-                getLogger().info("[DEBUG] [" + channelName + "] ChatBubbles disabled for " + player.getName() + " - No prefix added");
             }
         } catch (Exception e) {
-            getLogger().warning("Error: " + e.getMessage());
+            getLogger().warning("Error in LOWEST listener: " + e.getMessage());
+        }
+    }
+
+    /**
+     * HIGH Priority - Remueve el prefijo SI ChatBubbles está OFF
+     * Se ejecuta DESPUÉS de ChatBubbles para limpiar el prefijo si es necesario
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onPlayerChatHigh(AsyncPlayerChatEvent event) {
+        Player player = event.getPlayer();
+        if (player == null) return;
+
+        try {
+            String channelName = expansion.getChannelName(player);
+            if (channelName == null || channelName.isEmpty()) {
+                return;
+            }
+
+            List<String> bubbleChannels = getConfig().getStringList("bubble-channels");
+            String prefix = getBubblePrefix();
+            String message = event.getMessage();
+
+            // Solo procesar si:
+            // 1. El canal requiere burbujas
+            // 2. El mensaje aún tiene el prefijo
+            if (bubbleChannels.contains(channelName) && message.startsWith(prefix)) {
+
+                // Verificar si ChatBubbles está desactivado
+                if (isChatBubblesDisabledForPlayer(player)) {
+                    String cleanMessage = message.substring(prefix.length());
+                    event.setMessage(cleanMessage);
+
+                    if (debugMode) {
+                        getLogger().info("[DEBUG] HIGH: ChatBubbles está OFF para " + player.getName());
+                        getLogger().info("[DEBUG] HIGH: Removiendo prefijo: '" + message + "' -> '" + cleanMessage + "'");
+                    }
+                } else {
+                    if (debugMode) {
+                        getLogger().info("[DEBUG] HIGH: ChatBubbles está ON - prefijo mantenido para procesamiento");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            getLogger().warning("Error in HIGH listener: " + e.getMessage());
         }
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("CarbonChatExpansion v1.0 disabled");
+        getLogger().info("CarbonChatExpansion v1.0.2 disabled");
     }
 }
