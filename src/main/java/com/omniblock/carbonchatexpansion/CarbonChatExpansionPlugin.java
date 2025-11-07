@@ -1,5 +1,6 @@
 package com.omniblock.carbonchatexpansion;
 
+import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -25,7 +26,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             expansion = new CarbonChannelExpansion(this);
             if (expansion.register()) {
-                getLogger().info("CarbonChatExpansion v1.0.2 enabled");
+                getLogger().info("CarbonChatExpansion v1.0.3 enabled");
             } else {
                 getLogger().warning("Failed to register PlaceholderAPI expansion");
             }
@@ -47,7 +48,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         }
 
         if (args.length == 0) {
-            sender.sendMessage("§6CarbonChatExpansion v1.0.2 §7- Comandos:");
+            sender.sendMessage("§6CarbonChatExpansion v1.0.3 §7- Comandos:");
             sender.sendMessage("§7- §e/cce reload §7- Recarga la configuración");
             sender.sendMessage("§7- §e/cce debug <on|off> §7- Activa/desactiva debug");
             return true;
@@ -93,50 +94,48 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
 
     /**
      * Detecta si ChatBubbles está desactivado para el jugador
-     * Usa múltiples métodos de detección para máxima compatibilidad
+     * Accede directamente al togglePF de ChatBubbles
      */
     private boolean isChatBubblesDisabledForPlayer(Player player) {
-        // Método 1: Intenta usar ChatBubbles API directamente
         try {
-            Class<?> apiClass = Class.forName("me.neznamy.chatbubbles.api.ChatBubblesAPI");
-            java.lang.reflect.Method method = apiClass.getMethod("isEnabled", Player.class);
-            Object result = method.invoke(null, player);
+            // Método 1: Acceder directamente al plugin ChatBubbles
+            org.bukkit.plugin.Plugin chatBubblesPlugin = Bukkit.getPluginManager().getPlugin("ChatBubbles");
 
-            if (result instanceof Boolean) {
-                boolean isEnabled = (Boolean) result;
+            if (chatBubblesPlugin != null) {
+                // Acceder al campo togglePF mediante reflexión
+                java.lang.reflect.Field togglePFField = chatBubblesPlugin.getClass().getDeclaredField("togglePF");
+                togglePFField.setAccessible(true);
+                Object togglePF = togglePFField.get(chatBubblesPlugin);
+
+                // Llamar al método getBoolean con el UUID del jugador
+                java.lang.reflect.Method getBooleanMethod = togglePF.getClass().getMethod("getBoolean", String.class);
+                Boolean isEnabled = (Boolean) getBooleanMethod.invoke(togglePF, player.getUniqueId().toString());
+
                 if (debugMode) {
-                    getLogger().info("[DEBUG] ChatBubbles API status for " + player.getName() + ": " + (isEnabled ? "ON" : "OFF"));
+                    getLogger().info("[DEBUG] ChatBubbles togglePF for " + player.getName() + ": " + (isEnabled ? "ON" : "OFF"));
                 }
+
+                // Retorna true si está DESACTIVADO
                 return !isEnabled;
-            }
-        } catch (ClassNotFoundException e) {
-            if (debugMode) {
-                getLogger().info("[DEBUG] ChatBubbles API class not found - trying alternative");
-            }
-        } catch (Exception e) {
-            if (debugMode) {
-                getLogger().info("[DEBUG] Error with API method: " + e.getMessage());
-            }
-        }
-
-        // Método 2: Revisar metadata del jugador
-        try {
-            if (player.hasMetadata("chatbubble_disabled")) {
-                boolean disabled = player.getMetadata("chatbubble_disabled").get(0).asBoolean();
+            } else {
                 if (debugMode) {
-                    getLogger().info("[DEBUG] ChatBubbles metadata for " + player.getName() + ": " + (disabled ? "OFF" : "ON"));
+                    getLogger().info("[DEBUG] ChatBubbles plugin not found");
                 }
-                return disabled;
+            }
+        } catch (NoSuchFieldException e) {
+            if (debugMode) {
+                getLogger().info("[DEBUG] togglePF field not found in ChatBubbles: " + e.getMessage());
             }
         } catch (Exception e) {
             if (debugMode) {
-                getLogger().info("[DEBUG] No metadata found: " + e.getMessage());
+                getLogger().info("[DEBUG] Error accessing ChatBubbles togglePF: " + e.getMessage());
+                e.printStackTrace();
             }
         }
 
-        // Si no podemos detectar, asumir que está activado (no remover prefijo)
+        // Si no podemos detectar, asumir que está activado (no remover prefijo por seguridad)
         if (debugMode) {
-            getLogger().info("[DEBUG] Could not detect ChatBubbles status for " + player.getName() + " - assuming ON");
+            getLogger().info("[DEBUG] Could not determine ChatBubbles status for " + player.getName() + " - assuming ON");
         }
         return false;
     }
@@ -203,12 +202,12 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
                     event.setMessage(cleanMessage);
 
                     if (debugMode) {
-                        getLogger().info("[DEBUG] HIGH: ChatBubbles está OFF para " + player.getName());
+                        getLogger().info("[DEBUG] HIGH: ChatBubbles OFF para " + player.getName());
                         getLogger().info("[DEBUG] HIGH: Removiendo prefijo: '" + message + "' -> '" + cleanMessage + "'");
                     }
                 } else {
                     if (debugMode) {
-                        getLogger().info("[DEBUG] HIGH: ChatBubbles está ON - prefijo mantenido para procesamiento");
+                        getLogger().info("[DEBUG] HIGH: ChatBubbles ON - prefijo mantenido");
                     }
                 }
             }
@@ -219,6 +218,6 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
 
     @Override
     public void onDisable() {
-        getLogger().info("CarbonChatExpansion v1.0.2 disabled");
+        getLogger().info("CarbonChatExpansion v1.0.3 disabled");
     }
 }

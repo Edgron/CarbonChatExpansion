@@ -1,4 +1,4 @@
-# CarbonChatExpansion v1.0.2
+# CarbonChatExpansion v1.0.3
 
 **Created for Omniblock by Edgron**
 
@@ -27,11 +27,12 @@ Configure which CarbonChat channels generate chat bubbles:
 ### 3. Automatic Prefix Management
 The plugin automatically adds the bubble-trigger prefix (default: `.`) to messages in configured channels. ChatBubbles then detects this prefix and creates the bubble, removing the prefix automatically.
 
-### 4. ChatBubbles Toggle Detection (v1.0.2)
-**IMPROVED:** The plugin now uses a dual-listener approach to handle ChatBubbles toggle:
+### 4. ChatBubbles Toggle Detection (v1.0.3)
+**FIXED:** Direct access to ChatBubbles `togglePF` for accurate detection:
 
 - **LOWEST Listener**: Always adds the prefix if the channel requires bubbles
-- **HIGH Listener**: Removes the prefix if ChatBubbles is OFF for the player
+- **HIGH Listener**: Accesses ChatBubbles' internal `togglePF` to check player status
+- **Removes prefix**: Only if ChatBubbles is OFF for the player
 
 This ensures the prefix never appears in chat when bubbles are disabled.
 
@@ -50,7 +51,7 @@ This ensures the prefix never appears in chat when bubbles are disabled.
 
 ## 🔧 Installation
 
-1. Download `CarbonChatExpansion-1.0.2.jar`
+1. Download `CarbonChatExpansion-1.0.3.jar`
 2. Place in your server's `plugins/` folder
 3. Configure ChatBubbles (see below)
 4. Configure CarbonChatExpansion (see below)
@@ -138,7 +139,7 @@ Use these in ChatBubbles or other PlaceholderAPI-compatible plugins:
 
 ---
 
-## 💡 How It Works (v1.0.2)
+## 💡 How It Works (v1.0.3)
 
 1. **Player sends message** in a channel (e.g., "chillar")
 2. **LOWEST Listener** checks if "chillar" is in `bubble-channels`
@@ -146,7 +147,7 @@ Use these in ChatBubbles or other PlaceholderAPI-compatible plugins:
 4. **ChatBubbles** processes the message:
    - If bubbles are ON: Creates bubble and removes `.`
    - If bubbles are OFF: Does nothing (prefix remains)
-5. **HIGH Listener** checks if ChatBubbles is OFF
+5. **HIGH Listener** accesses ChatBubbles' `togglePF` directly
 6. If OFF, removes the `.` manually
 7. **Result**: Clean message in chat, bubble only if enabled
 
@@ -179,8 +180,8 @@ channel-colors:
 
 ## 🐛 Troubleshooting
 
-### Prefix appearing in chat (v1.0.2 fix)
-- **Fixed:** Dual-listener approach ensures prefix is always removed when bubbles are OFF
+### Prefix appearing in chat (v1.0.3 fix)
+- **Fixed:** Direct `togglePF` access ensures accurate detection
 - Enable debug mode to see detailed processing: `/cce debug on`
 
 ### Bubbles not appearing
@@ -198,18 +199,22 @@ channel-colors:
 ### Debug Mode
 Enable with `/cce debug on` to see detailed logging:
 - LOWEST: Channel detection and prefix addition
-- HIGH: ChatBubbles status and prefix removal decisions
+- HIGH: Direct togglePF access and status detection
 - Detailed step-by-step processing
 
 ---
 
 ## 📝 Version History
 
+**v1.0.3** - Direct togglePF Access
+- FIXED: Direct access to ChatBubbles' `togglePF` field
+- IMPROVED: Accurate toggle detection via reflection
+- IMPROVED: Better error handling and debug logging
+
 **v1.0.2** - Toggle Detection Fix
 - FIXED: Prefix no longer appears when ChatBubbles is OFF
 - IMPROVED: Dual-listener approach (LOWEST + HIGH)
 - IMPROVED: Multiple detection methods for ChatBubbles status
-- IMPROVED: Debug logging shows both listener stages
 
 **v1.0.1** - Toggle Detection
 - NEW: ChatBubbles toggle detection
@@ -227,7 +232,7 @@ Enable with `/cce debug on` to see detailed logging:
 
 **Created by:** Edgron  
 **For:** Omniblock Network  
-**Version:** 1.0.2  
+**Version:** 1.0.3  
 **License:** Custom - Created exclusively for Omniblock
 
 ---

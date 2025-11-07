@@ -1,5 +1,5 @@
 name: CarbonChatExpansion
-version: 1.0.2
+version: 1.0.3
 main: com.omniblock.carbonchatexpansion.CarbonChatExpansionPlugin
 author: Edgron
 description: CarbonChat & ChatBubbles integration hook for Omniblock
