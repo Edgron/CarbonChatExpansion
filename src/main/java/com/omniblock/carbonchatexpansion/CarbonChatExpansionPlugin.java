@@ -9,14 +9,27 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.List;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.*;
 
 public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, CommandExecutor {
 
     private CarbonChannelExpansion expansion;
     private boolean debugMode = false;
+
+    // Cache de reflexión para optimización
+    private Field cachedImplField = null;
+    private Field cachedHologramsField = null;
+    private Method cachedHideAllMethod = null;
+    private Method cachedSetShowPlayerMethod = null;
+
+    // Anti-spam para party chat
+    private final Map<UUID, Long> lastPartyChatTime = new HashMap<>();
+    private static final long PARTY_CHAT_COOLDOWN = 100L; // 100ms entre mensajes
 
     @Override
     public void onEnable() {
@@ -26,7 +39,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             expansion = new CarbonChannelExpansion(this);
             if (expansion.register()) {
-                getLogger().info("CarbonChatExpansion v1.0.3 enabled");
+                getLogger().info("CarbonChatExpansion v1.0.4 enabled");
             } else {
                 getLogger().warning("Failed to register PlaceholderAPI expansion");
             }
@@ -38,6 +51,12 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
 
         getServer().getPluginManager().registerEvents(this, this);
         getCommand("carbonchatexpansion").setExecutor(this);
+
+        // Limpieza periódica de cooldown map
+        Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+            long now = System.currentTimeMillis();
+            lastPartyChatTime.entrySet().removeIf(entry -> (now - entry.getValue()) > 60000);
+        }, 1200L, 1200L); // Cada 60 segundos
     }
 
     @Override
@@ -48,7 +67,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         }
 
         if (args.length == 0) {
-            sender.sendMessage("§6CarbonChatExpansion v1.0.3 §7- Comandos:");
+            sender.sendMessage("§6CarbonChatExpansion v1.0.4 §7- Comandos:");
             sender.sendMessage("§7- §e/cce reload §7- Recarga la configuración");
             sender.sendMessage("§7- §e/cce debug <on|off> §7- Activa/desactiva debug");
             return true;
@@ -58,6 +77,11 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
             case "reload":
                 reloadConfig();
                 debugMode = getConfig().getBoolean("debug-mode", false);
+                // Clear reflection cache
+                cachedImplField = null;
+                cachedHologramsField = null;
+                cachedHideAllMethod = null;
+                cachedSetShowPlayerMethod = null;
                 sender.sendMessage("§aConfiguración recargada correctamente.");
                 return true;
 
@@ -94,20 +118,16 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
 
     /**
      * Detecta si ChatBubbles está desactivado para el jugador
-     * Accede directamente al togglePF de ChatBubbles
      */
     private boolean isChatBubblesDisabledForPlayer(Player player) {
         try {
-            // Método 1: Acceder directamente al plugin ChatBubbles
             org.bukkit.plugin.Plugin chatBubblesPlugin = Bukkit.getPluginManager().getPlugin("ChatBubbles");
 
             if (chatBubblesPlugin != null) {
-                // Acceder al campo togglePF mediante reflexión
                 java.lang.reflect.Field togglePFField = chatBubblesPlugin.getClass().getDeclaredField("togglePF");
                 togglePFField.setAccessible(true);
                 Object togglePF = togglePFField.get(chatBubblesPlugin);
 
-                // Llamar al método getBoolean con el UUID del jugador
                 java.lang.reflect.Method getBooleanMethod = togglePF.getClass().getMethod("getBoolean", String.class);
                 Boolean isEnabled = (Boolean) getBooleanMethod.invoke(togglePF, player.getUniqueId().toString());
 
@@ -115,47 +135,148 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
                     getLogger().info("[DEBUG] ChatBubbles togglePF for " + player.getName() + ": " + (isEnabled ? "ON" : "OFF"));
                 }
 
-                // Retorna true si está DESACTIVADO
                 return !isEnabled;
-            } else {
-                if (debugMode) {
-                    getLogger().info("[DEBUG] ChatBubbles plugin not found");
-                }
-            }
-        } catch (NoSuchFieldException e) {
-            if (debugMode) {
-                getLogger().info("[DEBUG] togglePF field not found in ChatBubbles: " + e.getMessage());
             }
         } catch (Exception e) {
             if (debugMode) {
                 getLogger().info("[DEBUG] Error accessing ChatBubbles togglePF: " + e.getMessage());
-                e.printStackTrace();
             }
         }
 
-        // Si no podemos detectar, asumir que está activado (no remover prefijo por seguridad)
-        if (debugMode) {
-            getLogger().info("[DEBUG] Could not determine ChatBubbles status for " + player.getName() + " - assuming ON");
-        }
         return false;
     }
 
     /**
-     * LOWEST Priority - Añade prefijo SIEMPRE si el canal requiere burbujas
+     * Obtener party del jugador mediante CarbonChat API
      */
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onPlayerChatLowest(AsyncPlayerChatEvent event) {
-        Player player = event.getPlayer();
-        if (player == null) return;
+    private Object getPlayerParty(Player player) {
+        try {
+            Class<?> carbonChatProviderClass = Class.forName("net.draycia.carbon.api.CarbonChatProvider");
+            Method carbonChatMethod = carbonChatProviderClass.getMethod("carbonChat");
+            Object carbonChat = carbonChatMethod.invoke(null);
+
+            Method userManagerMethod = carbonChat.getClass().getMethod("userManager");
+            Object userManager = userManagerMethod.invoke(carbonChat);
+
+            Method userMethod = userManager.getClass().getMethod("user", java.util.UUID.class);
+            Object userCompletableFuture = userMethod.invoke(userManager, player.getUniqueId());
+
+            Method joinMethod = userCompletableFuture.getClass().getMethod("join");
+            Object carbonPlayer = joinMethod.invoke(userCompletableFuture);
+
+            if (carbonPlayer == null) return null;
+
+            Method partyMethod = carbonPlayer.getClass().getMethod("party");
+            return partyMethod.invoke(carbonPlayer);
+
+        } catch (Exception e) {
+            if (debugMode) {
+                getLogger().warning("[DEBUG] Error getting player party: " + e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Obtener miembros de la party
+     */
+    private Set<Player> getPartyMembers(Object party) {
+        Set<Player> members = new HashSet<>();
+        if (party == null) return members;
 
         try {
-            String channelName = expansion.getChannelName(player);
-            if (channelName == null || channelName.isEmpty()) {
-                return;
+            Method membersMethod = party.getClass().getMethod("members");
+            @SuppressWarnings("unchecked")
+            Set<UUID> memberIds = (Set<UUID>) membersMethod.invoke(party);
+
+            for (UUID memberId : memberIds) {
+                Player member = Bukkit.getPlayer(memberId);
+                if (member != null && member.isOnline()) {
+                    members.add(member);
+                }
+            }
+        } catch (Exception e) {
+            if (debugMode) {
+                getLogger().warning("[DEBUG] Error getting party members: " + e.getMessage());
+            }
+        }
+
+        return members;
+    }
+
+    /**
+     * Obtener UUID de la party
+     */
+    private UUID getPartyId(Object party) {
+        if (party == null) return null;
+
+        try {
+            Method idMethod = party.getClass().getMethod("id");
+            return (UUID) idMethod.invoke(party);
+        } catch (Exception e) {
+            if (debugMode) {
+                getLogger().warning("[DEBUG] Error getting party ID: " + e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * LOWEST Priority - Filtrar recipients para party chat
+     */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onPartyChatFilter(AsyncPlayerChatEvent event) {
+        Player sender = event.getPlayer();
+        if (sender == null) return;
+
+        try {
+            String channelName = expansion.getChannelName(sender);
+            if (channelName == null || channelName.isEmpty()) return;
+
+            List<String> partyChannels = getConfig().getStringList("party-channels");
+
+            // Solo procesar si es un canal de party
+            if (partyChannels.contains(channelName)) {
+                // Anti-spam check
+                long now = System.currentTimeMillis();
+                Long last = lastPartyChatTime.get(sender.getUniqueId());
+                if (last != null && (now - last) < PARTY_CHAT_COOLDOWN) {
+                    if (debugMode) {
+                        getLogger().info("[DEBUG] Party chat cooldown for " + sender.getName());
+                    }
+                    return;
+                }
+                lastPartyChatTime.put(sender.getUniqueId(), now);
+
+                // Obtener party del sender
+                Object senderParty = getPlayerParty(sender);
+                if (senderParty == null) {
+                    if (debugMode) {
+                        getLogger().info("[DEBUG] " + sender.getName() + " is not in a party");
+                    }
+                    return;
+                }
+
+                UUID partyId = getPartyId(senderParty);
+                if (partyId == null) return;
+
+                // Filtrar recipients: solo party members
+                Set<Player> partyMembers = getPartyMembers(senderParty);
+                event.getRecipients().clear();
+                event.getRecipients().addAll(partyMembers);
+
+                // Guardar party ID para el listener MONITOR
+                sender.setMetadata("cce_party_id", new FixedMetadataValue(this, partyId.toString()));
+                sender.setMetadata("cce_party_channel", new FixedMetadataValue(this, channelName));
+
+                if (debugMode) {
+                    getLogger().info("[DEBUG] LOWEST: Party chat filtered for " + sender.getName());
+                    getLogger().info("[DEBUG] LOWEST: Party members: " + partyMembers.size());
+                }
             }
 
+            // Añadir prefijo para bubble channels (comportamiento normal)
             List<String> bubbleChannels = getConfig().getStringList("bubble-channels");
-
             if (bubbleChannels.contains(channelName)) {
                 String originalMessage = event.getMessage();
                 String prefix = getBubblePrefix();
@@ -163,18 +284,142 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
                 event.setMessage(newMessage);
 
                 if (debugMode) {
-                    getLogger().info("[DEBUG] LOWEST: Canal '" + channelName + "' requiere burbujas");
-                    getLogger().info("[DEBUG] LOWEST: '" + originalMessage + "' -> '" + newMessage + "'");
+                    getLogger().info("[DEBUG] LOWEST: Bubble prefix added for '" + channelName + "'");
                 }
             }
         } catch (Exception e) {
             getLogger().warning("Error in LOWEST listener: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * MONITOR Priority - Programar filtrado de hologram
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPartyChatMonitor(AsyncPlayerChatEvent event) {
+        Player sender = event.getPlayer();
+        if (sender == null) return;
+
+        if (!sender.hasMetadata("cce_party_id")) return;
+
+        try {
+            String partyIdStr = sender.getMetadata("cce_party_id").get(0).asString();
+            UUID partyId = UUID.fromString(partyIdStr);
+
+            if (debugMode) {
+                getLogger().info("[DEBUG] MONITOR: Scheduling hologram filter for " + sender.getName());
+            }
+
+            // Programar filtrado de hologram (2 ticks después)
+            Bukkit.getScheduler().runTaskLater(this, () -> {
+                filterHologramVisibility(sender, partyId);
+
+                // Cleanup metadata
+                sender.removeMetadata("cce_party_id", this);
+                sender.removeMetadata("cce_party_channel", this);
+            }, 2L);
+
+        } catch (Exception e) {
+            if (debugMode) {
+                getLogger().warning("[DEBUG] Error in MONITOR listener: " + e.getMessage());
+            }
+            // Cleanup en caso de error
+            sender.removeMetadata("cce_party_id", this);
+            sender.removeMetadata("cce_party_channel", this);
+        }
+    }
+
+    /**
+     * Filtrar visibilidad del hologram via DecentHolograms API
+     */
+    private void filterHologramVisibility(Player sender, UUID partyId) {
+        try {
+            org.bukkit.plugin.Plugin chatBubblesPlugin = Bukkit.getPluginManager().getPlugin("ChatBubbles");
+            if (chatBubblesPlugin == null) {
+                if (debugMode) {
+                    getLogger().warning("[DEBUG] ChatBubbles plugin not found");
+                }
+                return;
+            }
+
+            // Cache de reflexión
+            if (cachedImplField == null) {
+                cachedImplField = chatBubblesPlugin.getClass().getDeclaredField("decentHoloImpl");
+                cachedImplField.setAccessible(true);
+            }
+
+            Object decentImpl = cachedImplField.get(chatBubblesPlugin);
+            if (decentImpl == null) {
+                if (debugMode) {
+                    getLogger().warning("[DEBUG] DecentHolograms implementation not found");
+                }
+                return;
+            }
+
+            // Obtener existingHolograms map
+            if (cachedHologramsField == null) {
+                cachedHologramsField = decentImpl.getClass().getDeclaredField("existingHolograms");
+                cachedHologramsField.setAccessible(true);
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<UUID, List<?>> existingHolograms = (Map<UUID, List<?>>) cachedHologramsField.get(decentImpl);
+
+            // Obtener el hologram recién creado
+            List<?> senderHolograms = existingHolograms.get(sender.getUniqueId());
+            if (senderHolograms == null || senderHolograms.isEmpty()) {
+                if (debugMode) {
+                    getLogger().info("[DEBUG] No holograms found for " + sender.getName());
+                }
+                return;
+            }
+
+            // El hologram más reciente
+            Object hologram = senderHolograms.get(senderHolograms.size() - 1);
+
+            // Cache de métodos
+            if (cachedHideAllMethod == null) {
+                cachedHideAllMethod = hologram.getClass().getMethod("hideAll");
+            }
+            if (cachedSetShowPlayerMethod == null) {
+                cachedSetShowPlayerMethod = hologram.getClass().getMethod("setShowPlayer", Player.class);
+            }
+
+            // Ocultar para todos
+            cachedHideAllMethod.invoke(hologram);
+
+            if (debugMode) {
+                getLogger().info("[DEBUG] Hologram hidden for all players");
+            }
+
+            // Mostrar solo a party members
+            Object party = getPlayerParty(sender);
+            if (party != null) {
+                Set<Player> partyMembers = getPartyMembers(party);
+                for (Player member : partyMembers) {
+                    cachedSetShowPlayerMethod.invoke(hologram, member);
+                }
+
+                if (debugMode) {
+                    getLogger().info("[DEBUG] Hologram visible to " + partyMembers.size() + " party members");
+                }
+            }
+
+        } catch (NoSuchFieldException e) {
+            if (debugMode) {
+                getLogger().warning("[DEBUG] DecentHolograms field not found: " + e.getMessage());
+            }
+        } catch (Exception e) {
+            if (debugMode) {
+                getLogger().warning("[DEBUG] Error filtering hologram visibility: " + e.getMessage());
+                e.printStackTrace();
+            }
         }
     }
 
     /**
      * HIGH Priority - Remueve el prefijo SI ChatBubbles está OFF
-     * Se ejecuta DESPUÉS de ChatBubbles para limpiar el prefijo si es necesario
      */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPlayerChatHigh(AsyncPlayerChatEvent event) {
@@ -191,23 +436,13 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
             String prefix = getBubblePrefix();
             String message = event.getMessage();
 
-            // Solo procesar si:
-            // 1. El canal requiere burbujas
-            // 2. El mensaje aún tiene el prefijo
             if (bubbleChannels.contains(channelName) && message.startsWith(prefix)) {
-
-                // Verificar si ChatBubbles está desactivado
                 if (isChatBubblesDisabledForPlayer(player)) {
                     String cleanMessage = message.substring(prefix.length());
                     event.setMessage(cleanMessage);
 
                     if (debugMode) {
-                        getLogger().info("[DEBUG] HIGH: ChatBubbles OFF para " + player.getName());
-                        getLogger().info("[DEBUG] HIGH: Removiendo prefijo: '" + message + "' -> '" + cleanMessage + "'");
-                    }
-                } else {
-                    if (debugMode) {
-                        getLogger().info("[DEBUG] HIGH: ChatBubbles ON - prefijo mantenido");
+                        getLogger().info("[DEBUG] HIGH: ChatBubbles OFF - Prefix removed");
                     }
                 }
             }
@@ -218,6 +453,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
 
     @Override
     public void onDisable() {
-        getLogger().info("CarbonChatExpansion v1.0.3 disabled");
+        lastPartyChatTime.clear();
+        getLogger().info("CarbonChatExpansion v1.0.4 disabled");
     }
 }
