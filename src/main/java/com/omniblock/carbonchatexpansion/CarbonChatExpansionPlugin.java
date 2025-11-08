@@ -39,7 +39,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             expansion = new CarbonChannelExpansion(this);
             if (expansion.register()) {
-                getLogger().info("CarbonChatExpansion v1.0.4 enabled");
+                getLogger().info("CarbonChatExpansion v1.0.5 enabled");
             } else {
                 getLogger().warning("Failed to register PlaceholderAPI expansion");
             }
@@ -67,7 +67,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         }
 
         if (args.length == 0) {
-            sender.sendMessage("§6CarbonChatExpansion v1.0.4 §7- Comandos:");
+            sender.sendMessage("§6CarbonChatExpansion v1.0.5 §7- Comandos:");
             sender.sendMessage("§7- §e/cce reload §7- Recarga la configuración");
             sender.sendMessage("§7- §e/cce debug <on|off> §7- Activa/desactiva debug");
             return true;
@@ -205,20 +205,11 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
     }
 
     /**
-     * Obtener UUID de la party
+     * Obtener identity hashcode de la party (ÚNICO E INMUTABLE)
      */
-    private UUID getPartyId(Object party) {
-        if (party == null) return null;
-
-        try {
-            Method idMethod = party.getClass().getMethod("id");
-            return (UUID) idMethod.invoke(party);
-        } catch (Exception e) {
-            if (debugMode) {
-                getLogger().warning("[DEBUG] Error getting party ID: " + e.getMessage());
-            }
-            return null;
-        }
+    private int getPartyHashCode(Object party) {
+        if (party == null) return -1;
+        return System.identityHashCode(party);
     }
 
     /**
@@ -257,20 +248,21 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
                     return;
                 }
 
-                UUID partyId = getPartyId(senderParty);
-                if (partyId == null) return;
+                int partyHashCode = getPartyHashCode(senderParty);
+                if (partyHashCode == -1) return;
 
                 // Filtrar recipients: solo party members
                 Set<Player> partyMembers = getPartyMembers(senderParty);
                 event.getRecipients().clear();
                 event.getRecipients().addAll(partyMembers);
 
-                // Guardar party ID para el listener MONITOR
-                sender.setMetadata("cce_party_id", new FixedMetadataValue(this, partyId.toString()));
+                // Guardar party hashcode para el listener MONITOR
+                sender.setMetadata("cce_party_hash", new FixedMetadataValue(this, partyHashCode));
                 sender.setMetadata("cce_party_channel", new FixedMetadataValue(this, channelName));
 
                 if (debugMode) {
                     getLogger().info("[DEBUG] LOWEST: Party chat filtered for " + sender.getName());
+                    getLogger().info("[DEBUG] LOWEST: Party hashcode: " + partyHashCode);
                     getLogger().info("[DEBUG] LOWEST: Party members: " + partyMembers.size());
                 }
             }
@@ -301,22 +293,22 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         Player sender = event.getPlayer();
         if (sender == null) return;
 
-        if (!sender.hasMetadata("cce_party_id")) return;
+        if (!sender.hasMetadata("cce_party_hash")) return;
 
         try {
-            String partyIdStr = sender.getMetadata("cce_party_id").get(0).asString();
-            UUID partyId = UUID.fromString(partyIdStr);
+            int partyHashCode = sender.getMetadata("cce_party_hash").get(0).asInt();
 
             if (debugMode) {
                 getLogger().info("[DEBUG] MONITOR: Scheduling hologram filter for " + sender.getName());
+                getLogger().info("[DEBUG] MONITOR: Party hashcode: " + partyHashCode);
             }
 
             // Programar filtrado de hologram (2 ticks después)
             Bukkit.getScheduler().runTaskLater(this, () -> {
-                filterHologramVisibility(sender, partyId);
+                filterHologramVisibility(sender, partyHashCode);
 
                 // Cleanup metadata
-                sender.removeMetadata("cce_party_id", this);
+                sender.removeMetadata("cce_party_hash", this);
                 sender.removeMetadata("cce_party_channel", this);
             }, 2L);
 
@@ -325,7 +317,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
                 getLogger().warning("[DEBUG] Error in MONITOR listener: " + e.getMessage());
             }
             // Cleanup en caso de error
-            sender.removeMetadata("cce_party_id", this);
+            sender.removeMetadata("cce_party_hash", this);
             sender.removeMetadata("cce_party_channel", this);
         }
     }
@@ -333,7 +325,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
     /**
      * Filtrar visibilidad del hologram via DecentHolograms API
      */
-    private void filterHologramVisibility(Player sender, UUID partyId) {
+    private void filterHologramVisibility(Player sender, int partyHashCode) {
         try {
             org.bukkit.plugin.Plugin chatBubblesPlugin = Bukkit.getPluginManager().getPlugin("ChatBubbles");
             if (chatBubblesPlugin == null) {
@@ -395,7 +387,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
 
             // Mostrar solo a party members
             Object party = getPlayerParty(sender);
-            if (party != null) {
+            if (party != null && System.identityHashCode(party) == partyHashCode) {
                 Set<Player> partyMembers = getPartyMembers(party);
                 for (Player member : partyMembers) {
                     cachedSetShowPlayerMethod.invoke(hologram, member);
@@ -403,6 +395,10 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
 
                 if (debugMode) {
                     getLogger().info("[DEBUG] Hologram visible to " + partyMembers.size() + " party members");
+                }
+            } else {
+                if (debugMode) {
+                    getLogger().warning("[DEBUG] Party reference changed or invalid");
                 }
             }
 
@@ -454,6 +450,6 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
     @Override
     public void onDisable() {
         lastPartyChatTime.clear();
-        getLogger().info("CarbonChatExpansion v1.0.4 disabled");
+        getLogger().info("CarbonChatExpansion v1.0.5 disabled");
     }
 }

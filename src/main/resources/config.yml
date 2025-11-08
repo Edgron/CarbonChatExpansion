@@ -1,5 +1,5 @@
 # ============================================================
-# CarbonChatExpansion v1.0.4 - Configuration
+# CarbonChatExpansion v1.0.5 - Configuration
 # Created for Omniblock by Edgron
 # ============================================================
 
@@ -14,7 +14,7 @@ bubble-channels:
   - gritar
   - decir
 
-# Party channels (NEW in v1.0.4)
+# Party channels (NEW in v1.0.4, FIXED in v1.0.5)
 # Messages and holograms only visible to party members
 # Estos canales también deben estar en bubble-channels si quieres burbujas
 party-channels:
@@ -47,3 +47,4 @@ debug-mode: false
 #   - Add "partychat" to both bubble-channels and party-channels
 #   - Messages will only be visible to party members
 #   - Holograms will only be visible to party members
+#   - Works with multiple parties with same/different names
