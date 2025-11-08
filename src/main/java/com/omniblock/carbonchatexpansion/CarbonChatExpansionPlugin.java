@@ -22,7 +22,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
     private boolean debugMode = false;
 
     // Cache de reflexión para optimización
-    private Field cachedImplField = null;
+    private Object cachedDecentImpl = null;
     private Field cachedHologramsField = null;
     private Method cachedHideAllMethod = null;
     private Method cachedSetShowPlayerMethod = null;
@@ -39,7 +39,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             expansion = new CarbonChannelExpansion(this);
             if (expansion.register()) {
-                getLogger().info("CarbonChatExpansion v1.0.5 enabled");
+                getLogger().info("CarbonChatExpansion v1.0.6 enabled");
             } else {
                 getLogger().warning("Failed to register PlaceholderAPI expansion");
             }
@@ -67,7 +67,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
         }
 
         if (args.length == 0) {
-            sender.sendMessage("§6CarbonChatExpansion v1.0.5 §7- Comandos:");
+            sender.sendMessage("§6CarbonChatExpansion v1.0.6 §7- Comandos:");
             sender.sendMessage("§7- §e/cce reload §7- Recarga la configuración");
             sender.sendMessage("§7- §e/cce debug <on|off> §7- Activa/desactiva debug");
             return true;
@@ -78,7 +78,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
                 reloadConfig();
                 debugMode = getConfig().getBoolean("debug-mode", false);
                 // Clear reflection cache
-                cachedImplField = null;
+                cachedDecentImpl = null;
                 cachedHologramsField = null;
                 cachedHideAllMethod = null;
                 cachedSetShowPlayerMethod = null;
@@ -323,6 +323,49 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
     }
 
     /**
+     * Obtener DecentHologramsImplementation mediante reflexión dinámica
+     */
+    private Object getDecentHologramsImplementation(org.bukkit.plugin.Plugin chatBubblesPlugin) {
+        try {
+            if (cachedDecentImpl != null) {
+                return cachedDecentImpl;
+            }
+
+            // Buscar el campo que contiene DecentHologramsImplementation
+            Field[] allFields = chatBubblesPlugin.getClass().getDeclaredFields();
+
+            for (Field field : allFields) {
+                String fieldTypeName = field.getType().getName();
+
+                // Buscar por nombre de clase
+                if (fieldTypeName.contains("DecentHologramsImplementation")) {
+                    field.setAccessible(true);
+                    Object impl = field.get(chatBubblesPlugin);
+
+                    if (impl != null) {
+                        cachedDecentImpl = impl;
+                        if (debugMode) {
+                            getLogger().info("[DEBUG] Found DecentHologramsImplementation in field: " + field.getName());
+                        }
+                        return impl;
+                    }
+                }
+            }
+
+            if (debugMode) {
+                getLogger().warning("[DEBUG] Could not find DecentHologramsImplementation in ChatBubbles fields");
+            }
+            return null;
+
+        } catch (Exception e) {
+            if (debugMode) {
+                getLogger().warning("[DEBUG] Error finding DecentHologramsImplementation: " + e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
      * Filtrar visibilidad del hologram via DecentHolograms API
      */
     private void filterHologramVisibility(Player sender, int partyHashCode) {
@@ -335,13 +378,8 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
                 return;
             }
 
-            // Cache de reflexión
-            if (cachedImplField == null) {
-                cachedImplField = chatBubblesPlugin.getClass().getDeclaredField("decentHoloImpl");
-                cachedImplField.setAccessible(true);
-            }
-
-            Object decentImpl = cachedImplField.get(chatBubblesPlugin);
+            // Obtener DecentHologramsImplementation dinámicamente
+            Object decentImpl = getDecentHologramsImplementation(chatBubblesPlugin);
             if (decentImpl == null) {
                 if (debugMode) {
                     getLogger().warning("[DEBUG] DecentHolograms implementation not found");
@@ -404,12 +442,11 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
 
         } catch (NoSuchFieldException e) {
             if (debugMode) {
-                getLogger().warning("[DEBUG] DecentHolograms field not found: " + e.getMessage());
+                getLogger().warning("[DEBUG] Field not found in DecentHologramsImplementation: " + e.getMessage());
             }
         } catch (Exception e) {
             if (debugMode) {
                 getLogger().warning("[DEBUG] Error filtering hologram visibility: " + e.getMessage());
-                e.printStackTrace();
             }
         }
     }
@@ -450,6 +487,7 @@ public class CarbonChatExpansionPlugin extends JavaPlugin implements Listener, C
     @Override
     public void onDisable() {
         lastPartyChatTime.clear();
-        getLogger().info("CarbonChatExpansion v1.0.5 disabled");
+        cachedDecentImpl = null;
+        getLogger().info("CarbonChatExpansion v1.0.6 disabled");
     }
 }

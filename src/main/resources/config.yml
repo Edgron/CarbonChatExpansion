@@ -1,27 +1,23 @@
 # ============================================================
-# CarbonChatExpansion v1.0.5 - Configuration
+# CarbonChatExpansion v1.0.6 - Configuration
 # Created for Omniblock by Edgron
 # ============================================================
 
 # Bubble prefix character (must match ChatBubbles config)
-# Este símbolo debe coincidir con ConfigFive_Prefix_Characters en ChatBubbles
 bubble-prefix: "."
 
 # Channels that generate bubbles
-# Deben tener el mismo nombre que en CarbonChat
 bubble-channels:
   - chillar
   - gritar
   - decir
 
-# Party channels (NEW in v1.0.4, FIXED in v1.0.5)
+# Party channels (FIXED in v1.0.6)
 # Messages and holograms only visible to party members
-# Estos canales también deben estar en bubble-channels si quieres burbujas
 party-channels:
   - partychat
 
 # Channel colors in HEX format (#RRGGBB)
-# Usado para el placeholder %carbonchat_channel_color%
 channel-colors:
   default: "#ffffff"
   global: "#ffff55"
@@ -33,18 +29,3 @@ channel-colors:
 
 # Debug mode (logs extra information)
 debug-mode: false
-
-# ============================================================
-# IMPORTANT: ChatBubbles Configuration
-# ============================================================
-# ChatBubbles/config.yml must be set to Mode 5:
-#   ChatBubble_Configuration_Mode: 5
-#   ConfigFive_Prefix_Characters:
-#     - "."  (must match bubble-prefix above)
-#   ChatBubble_Send_Original_Message: true
-#
-# Party Chat Feature:
-#   - Add "partychat" to both bubble-channels and party-channels
-#   - Messages will only be visible to party members
-#   - Holograms will only be visible to party members
-#   - Works with multiple parties with same/different names
