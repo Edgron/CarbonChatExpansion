@@ -6,7 +6,7 @@
 
     <groupId>com.omniblock</groupId>
     <artifactId>CarbonChatExpansion</artifactId>
-    <version>1.0.6</version>
+    <version>1.0.4</version>
     <packaging>jar</packaging>
 
     <name>CarbonChatExpansion</name>
